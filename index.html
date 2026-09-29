@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>MASTEC INV POS Web V59</title>
+<title>MASTEC INV POS Web V61</title>
 <style>
 *{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:#eef1f4;color:#17212b}
 .bar{background:#132735;color:#fff;padding:13px 20px;display:flex;justify-content:space-between;align-items:center;gap:10px}
@@ -88,6 +88,9 @@
 
 /* V45 · Resultados financieros */
 .v45Shell{max-width:1200px;margin:0 auto;padding:18px}.v45Head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}.v45Head h2{margin:0}.v45Period{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0}.v45Period button{border:1px solid #d7dce5;background:#fff;border-radius:10px;padding:9px 14px;cursor:pointer}.v45Period button.on{background:#102a43;color:#fff;border-color:#102a43}.v45Grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.v45Card{background:#fff;border:1px solid #e4e8ee;border-radius:14px;padding:16px;box-shadow:0 4px 14px rgba(0,0,0,.05)}.v45Card span{display:block;color:#667085;font-size:13px}.v45Card b{display:block;font-size:23px;margin-top:7px}.v45Card small{color:#667085}.v45Profit{border-left:5px solid #f28c28}.v45Panel{background:#fff;border:1px solid #e4e8ee;border-radius:14px;margin-top:14px;padding:16px}.v45Panel h3{margin:0 0 12px}.v45Rows{display:grid;grid-template-columns:1fr auto;gap:10px 18px}.v45Rows div{padding:7px 0;border-bottom:1px solid #eef1f5}.v45Positive{color:#087f5b}.v45Negative{color:#b42318}.v45Note{font-size:12px;color:#667085;margin-top:10px}.v45Btn{background:#102a43;color:#fff;border:0;border-radius:10px;padding:10px 14px;cursor:pointer}.v45Btn.orange{background:#f28c28;color:#111}.v45Table{width:100%;border-collapse:collapse}.v45Table th,.v45Table td{text-align:left;padding:9px;border-bottom:1px solid #edf0f4}.v45Table th{font-size:12px;color:#667085}.v45Actions{display:flex;gap:8px;flex-wrap:wrap}@media(max-width:900px){.v45Grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:560px){.v45Grid{grid-template-columns:1fr}.v45Shell{padding:10px}.v45Card b{font-size:20px}}
+
+/* ===== MASTEC V61 NUBE ===== */
+.v61cloudgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.v61status{padding:12px;border-radius:8px;background:#f5f7f8;border:1px solid #dfe4e8}.v61ok{color:#137333;font-weight:700}.v61warn{color:#9a6700;font-weight:700}.v61danger{color:#b42318;font-weight:700}.v61actions{display:flex;gap:8px;flex-wrap:wrap}.v61mini{font-size:12px;color:#667085}.v61entity{display:inline-block;background:#eef3f7;border-radius:20px;padding:5px 9px;margin:3px;font-size:12px}@media(max-width:800px){.v61cloudgrid{grid-template-columns:1fr}}
 </style>
 
 <style>
@@ -166,6 +169,78 @@ html,body{scroll-behavior:smooth}
 <body>
 
 
+<!-- ===== V61 CLOUD / SYNC ===== -->
+<div id="v61cloudModule" class="module hidden">
+  <div class="head"><h2>☁️ MASTEC V61 · Nube y sincronización</h2></div>
+  <div class="card" style="margin-bottom:14px">
+    <h3>Conecta MASTEC a tu base central</h3>
+    <p style="color:#667085">V61.1 ya viene preparada con la URL de tu proyecto. Solo debes colocar la Publishable key y crear/iniciar tu cuenta de nube. En esta primera etapa, los dispositivos pueden entrar con la misma cuenta. No uses una clave <b>service_role</b> en el navegador.</p>
+    <div class="v61cloudgrid">
+      <div>
+        <label>URL del proyecto Supabase</label>
+        <input id="v61SupabaseUrl" class="input" placeholder="https://tu-proyecto.supabase.co">
+      </div>
+      <div>
+        <label>Publishable key / anon key</label>
+        <input id="v61SupabaseKey" class="input" placeholder="sb_publishable_... o anon key">
+      </div>
+      <div>
+        <label>Correo de nube</label>
+        <input id="v61CloudEmail" class="input" type="email" placeholder="admin@tuempresa.com">
+      </div>
+      <div>
+        <label>Contraseña de nube</label>
+        <input id="v61CloudPass" class="input" type="password" placeholder="••••••••">
+      </div>
+    </div>
+    <div class="v61actions" style="margin-top:10px">
+      <button class="btn blue" onclick="v61SaveConfig()">💾 Guardar conexión</button>
+      <button class="btn orange" onclick="v61CloudSignIn()">🔐 Iniciar sesión nube</button>
+      <button class="btn gray" onclick="v61CloudSignUp()">➕ Crear cuenta nube</button>
+      <button class="btn green" onclick="v61CloudSignOut()">🚪 Cerrar sesión nube</button>
+    </div>
+    <div id="v61CloudStatus" class="v61status" style="margin-top:12px">Sin conexión configurada.</div>
+  </div>
+
+  <div class="card" style="margin-bottom:14px">
+    <h3>🏢 Espacio de trabajo</h3>
+    <div class="v61cloudgrid">
+      <div>
+        <label>Nombre del negocio / espacio</label>
+        <input id="v61WorkspaceName" class="input" placeholder="MASTEC INV">
+      </div>
+      <div>
+        <label>ID del espacio actual</label>
+        <input id="v61WorkspaceId" class="input" readonly placeholder="Se creará al configurar">
+      </div>
+    </div>
+    <div class="v61actions" style="margin-top:8px">
+      <button class="btn orange" onclick="v61CreateWorkspace()">🏢 Crear espacio</button>
+      <button class="btn blue" onclick="v61LoadWorkspace()">🔄 Cargar mi espacio</button>
+    </div>
+    <div class="v61mini" style="margin-top:8px">Para V61.1 usamos una cuenta de nube compartida entre tus dispositivos. La gestión de empleados con cuentas separadas y permisos por usuario entra en V61.2.</div>
+  </div>
+
+  <div class="card" style="margin-bottom:14px">
+    <h3>🔄 Sincronización</h3>
+    <div style="margin-bottom:10px">
+      <span class="v61entity">📦 Productos</span><span class="v61entity">👥 Clientes</span><span class="v61entity">🛒 Ventas</span>
+    </div>
+    <div class="v61actions">
+      <button class="btn orange" onclick="v61PushLocal()">☁️ Subir datos de este equipo</button>
+      <button class="btn blue" onclick="v61PullCloud()">⬇️ Descargar datos de la nube</button>
+      <button class="btn green" onclick="v61RefreshStatus()">🔍 Ver estado</button>
+    </div>
+    <div id="v61SyncStatus" class="v61status" style="margin-top:12px">No se ha ejecutado una sincronización.</div>
+  </div>
+
+  <div class="card">
+    <h3>🛡️ Recomendación</h3>
+    <p>Antes de subir datos reales, crea un <b>Respaldo V55</b>. V61 no elimina el respaldo local ni reemplaza V60.</p>
+    <p class="v61mini">La clave publicable de Supabase puede estar en el navegador; la clave service_role nunca debe ponerse aquí. Supabase debe tener RLS activo antes de usar datos reales.</p>
+  </div>
+</div>
+
 <!-- V55 BACKUP / RESTORE -->
 <div id="backupModule" class="module hidden">
   <div class="head"><h2>💾 Respaldo de MASTEC</h2></div>
@@ -187,7 +262,7 @@ html,body{scroll-behavior:smooth}
 <div id="login" class="loginScreen">
   <div class="loginBox">
     <div class="logo">⚙ MASTEC INV</div>
-    <div class="loginSub">POS Web V7 · Usuarios y permisos</div>
+    <div class="loginSub">POS Web V60 · Productos inteligentes · Usuarios y permisos</div>
     <label>Usuario</label>
     <input id="loginUser" class="input" autocomplete="username" placeholder="Usuario">
     <label>Contraseña</label>
@@ -422,7 +497,7 @@ html,body{scroll-behavior:smooth}
       <div class="v55PhotoActions">
         <button type="button" class="btn blue" onclick="selectProductPhotoV57()">📁 Desde PC</button>
         <button type="button" class="btn orange" onclick="captureProductPhotoV57()">📷 Cámara</button>
-        <button type="button" class="btn blue" onclick="openProductImageSearchV59()">🌐 Buscar automáticamente</button>
+        <button type="button" class="btn blue" onclick="openProductImageSearchV60()">🤖 Buscar por código</button>
         <button type="button" class="btn gray" onclick="removeProductPhotoV55()">Quitar foto</button>
       </div>
       <input id="p9Photo" type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" style="display:none">
@@ -431,7 +506,7 @@ html,body{scroll-behavior:smooth}
         <input id="p9ImageUrl" class="input" placeholder="Pegar URL de imagen de internet" style="margin:0">
         <button type="button" class="btn blue" onclick="useProductImageUrlV58()">Usar URL</button>
       </div>
-      <div class="small" style="margin-top:7px">“Buscar automáticamente” muestra varias imágenes. También puedes pegar la URL de una imagen.</div>
+      <div class="small" style="margin-top:7px">V60: MASTEC intenta identificar el producto por <b>código de barras</b>, obtiene imágenes disponibles y muestra varias opciones. Si no hay coincidencia, usa el nombre del producto.</div>
     </div>
   </div>
   <label>Stock inicial</label><input id="p9Stock" class="input" type="number" min="0" value="0">
@@ -923,7 +998,7 @@ html,body{scroll-behavior:smooth}
 <div id="supplierReceiptV42Modal" class="modal hidden"><div><button class="close" onclick="closeModal('supplierReceiptV42Modal')">✕</button><h2>🧾 Recibo de pago a proveedor</h2><div id="supplierReceiptV42Body"></div><button class="btn blue" style="width:100%;margin-top:10px" onclick="printSupplierReceiptV42()">🖨️ IMPRIMIR RECIBO</button></div></div>
 <script>
 const ROLE_PERMS={
-  "Administrador":["Ventas","Inventario","Compras","Caja","Clientes","Taller","Usuarios","Auditoría","Respaldo"],
+  "Administrador":["Ventas","Inventario","Compras","Caja","Clientes","Taller","Usuarios","Auditoría","Respaldo","Nube"],
   "Vendedor":["Ventas","Clientes"],
   "Caja":["Ventas","Caja","Clientes"],
   "Inventario":["Inventario","Compras","Proveedores"],
@@ -1057,13 +1132,13 @@ function logout(){log("Cierre de sesión");localStorage.removeItem(keySession);c
 function buildTabs(){
   const perms=ROLE_PERMS[current.role]||[];
   let out='<button id=tDashboard onclick="show(\'dashboard\')">🏠 Inicio</button>';
-  const map={Ventas:["🛒","Ventas"],Inventario:["📦","Inventario"],Compras:["🛍️","Compras"],Proveedores:["🏢","Proveedores"],Caja:["💰","Caja"],Clientes:["👥","Clientes"],Taller:["🔧","Taller"],Usuarios:["👤","Usuarios"],Auditoría:["📝","Auditoría"],Respaldo:["💾","Respaldo"]};
+  const map={Ventas:["🛒","Ventas"],Inventario:["📦","Inventario"],Compras:["🛍️","Compras"],Proveedores:["🏢","Proveedores"],Caja:["💰","Caja"],Clientes:["👥","Clientes"],Taller:["🔧","Taller"],Usuarios:["👤","Usuarios"],Auditoría:["📝","Auditoría"],Respaldo:["💾","Respaldo"],Nube:["☁️","Nube"]};
   perms.forEach(x=>{const m=map[x];out+=`<button onclick="module('${x}')">${m[0]} ${m[1]}</button>`});
   out+='<button onclick="show(\'settings\')">⚙️ Mi cuenta</button>';
   E.tabs.innerHTML=out;
 }
 function show(id){
-  ["dashboard","users","audit","settings","moduleInfo","workshop","v9inventory","v10purchases","v10movements","v11vehicles","v12sales","v12salesHistory","v13credit","v31caja","v36reports","v45results","backupModule"].forEach(x=>document.getElementById(x).classList.add("hidden"));
+  ["dashboard","users","audit","settings","moduleInfo","workshop","v9inventory","v10purchases","v10movements","v11vehicles","v12sales","v12salesHistory","v13credit","v31caja","v36reports","v45results","backupModule","v61cloudModule"].forEach(x=>document.getElementById(x).classList.add("hidden"));
   document.getElementById(id).classList.remove("hidden");
   if(id==="users"){renderUsers();previewRole()}
   if(id==="audit")renderAudit();
@@ -1074,6 +1149,7 @@ function module(name){
   if(!perms.includes(name))return msg("Sin permiso");
   log("Acceso al módulo: "+name);
   if(name==="Respaldo"){showBackupV55();return;}
+  if(name==="Nube"){showV61Cloud();return;}
   if(name==="Taller"){show("workshop");renderOT();return;}
   if(name==="Inventario"){show("v9inventory");renderProductsV9();return;}
   if(name==="Compras"){show("v10purchases");renderPurchases();return;}
@@ -1207,6 +1283,25 @@ function productImageSearchQueryV58(){
   return [name,barcode,code].filter(Boolean).join(" ").trim();
 }
 function searchProductImageInternetV58(){ openProductImageSearchV59(); }
+async function lookupBarcodeV60(barcode){
+  const clean=String(barcode||"").replace(/\D/g,"");
+  if(!clean)return null;
+  try{const r=await fetch("https://api.upcitemdb.com/prod/trial/lookup?upc="+encodeURIComponent(clean),{headers:{Accept:"application/json"}}); if(!r.ok)return null; const d=await r.json(); const item=Array.isArray(d.items)&&d.items.length?d.items[0]:null; if(!item)return null; return {title:item.title||"",brand:item.brand||"",images:Array.isArray(item.images)?item.images.filter(Boolean):[],upc:clean};}catch(e){return null}
+}
+function openProductImageSearchV60(){
+  const barcode=(($("p9Barcode")?.value||"").trim()).replace(/\D/g,""); const name=($("p9Name")?.value||"").trim(); const q=barcode||name; if(!q)return msg("Escribe primero el código de barras o nombre del producto.");
+  $("v59ImageSearchInput").value=q; $("v59ImageSearchGrid").innerHTML=""; $("v59ImageSearchState").textContent=barcode?"Buscando el producto por código de barras…":"Buscando imágenes por nombre…"; $("v59ImageSearchModal").classList.remove("hidden"); runProductImageSearchV60();
+}
+async function runProductImageSearchV60(){
+  const input=$("v59ImageSearchInput"),grid=$("v59ImageSearchGrid"),state=$("v59ImageSearchState"); const q=(input?.value||"").trim(); if(!q)return msg("Escribe un código de barras o nombre del producto."); grid.innerHTML=""; state.textContent="Buscando…"; const barcode=q.replace(/\D/g,""); const isBarcode=/^\d{8,14}$/.test(barcode); let product=null; if(isBarcode)product=await lookupBarcodeV60(barcode);
+  const terms=[]; if(product?.title)terms.push(product.title+(product.brand?" "+product.brand:"")); terms.push(isBarcode?barcode:q); let cards=[];
+  if(product?.images?.length)product.images.slice(0,8).forEach(url=>cards.push({url,title:product.title||"Producto identificado",source:"Código de barras · "+product.upc}));
+  for(const term of [...new Set(terms.filter(Boolean))].slice(0,2)){try{const rr=await fetch("https://api.openverse.org/v1/images/?q="+encodeURIComponent(term)+"&page_size=8",{headers:{Accept:"application/json"}}); if(!rr.ok)continue; const d=await rr.json(); for(const x of (Array.isArray(d.results)?d.results:[])){const url=x.url||x.thumbnail||""; if(!url||cards.some(c=>c.url===url))continue; cards.push({url,title:String(x.title||"Imagen del producto"),source:"Openverse"+(isBarcode?" · búsqueda automática":"")}); if(cards.length>=18)break;}}catch(e){} if(cards.length>=18)break;}
+  if(!cards.length){state.innerHTML=isBarcode?"No encontramos imágenes asociadas a ese código. Prueba con el nombre del producto o usa Google Imágenes.":"No encontramos imágenes para esa búsqueda. Prueba con otro nombre."; return;}
+  state.textContent=(product?.title?"Producto identificado: "+product.title+". ":"")+"Toca una imagen para seleccionarla.";
+  grid.innerHTML=cards.map((x,i)=>{const t=String(x.title||("Imagen "+(i+1))).replace(/</g,"&lt;").replace(/>/g,"&gt;"); const s=String(x.source||"Fuente").replace(/</g,"&lt;").replace(/>/g,"&gt;"); return '<button type="button" class="v59ImageCard v60ImageCard" data-image-url="'+encodeURIComponent(x.url)+'"><img src="'+x.url+'" alt="" loading="lazy" onerror="this.style.opacity=.2"><b>'+t+'</b><span class="v60Source">'+s+'</span></button>';}).join("");
+  grid.querySelectorAll(".v60ImageCard").forEach(btn=>btn.addEventListener("click",()=>{const url=decodeURIComponent(btn.dataset.imageUrl||""); if(!url)return msg("Esta imagen no tiene una dirección utilizable."); const modal=$("productV9Modal"); if(modal){modal.dataset.photoRemoved="0";modal.dataset.photoPending=url;} $("p9ImageUrl").value=url; renderProductPhotoV55(url); closeModal("v59ImageSearchModal"); msg("Foto seleccionada. Guarda el producto para conservarla.");}));
+}
 function openProductImageSearchV59(){
   const q=productImageSearchQueryV58();
   if(!q)return msg("Escribe primero el nombre o código del producto.");
@@ -2178,16 +2273,66 @@ function printV13PaymentReceipt(){
   const w=window.open("","_blank","width=420,height=650");
   if(!w)return msg("El navegador bloqueó la ventana de impresión");
   const name=c?.name||"Cliente", phone=c?.phone||"";
-  w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${p.number}</title><style>body{font-family:Arial,sans-serif;width:280px;margin:0 auto;padding:14px;color:#111}h1{text-align:center;font-size:22px;margin:0 0 4px}h2{text-align:center;font-size:14px;margin:0 0 14px}p{font-size:13px;margin:7px 0}.line{border-top:1px dashed #777;margin:12px 0}.amount{font-size:20px;font-weight:800;margin-top:14px}.balance{font-size:16px;font-weight:700;margin-top:7px;text-align:right}.foot{text-align:center;font-size:11px;margin-top:18px}</style>
-<style>
-.v41grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}.v41stat{background:#fff;border:1px solid #eee;border-radius:14px;padding:16px}.v41stat span{display:block;font-size:12px;opacity:.7}.v41stat b{font-size:22px;display:block;margin-top:5px}.v41pay{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.v41pay label{border:1px solid #ddd;border-radius:10px;padding:10px;cursor:pointer}.v41pay input{margin-right:6px}@media(max-width:800px){.v41grid{grid-template-columns:1fr}.v41pay{grid-template-columns:1fr 1fr}}
-</style>
-</head><body><h1>MASTEC INV</h1><h2>RECIBO DE ABONO</h2><div class="line"></div><p><b>Recibo:</b> ${p.number}</p><p><b>Fecha:</b> ${p.date}</p><p><b>Cliente:</b> ${name}</p>${phone?`<p><b>Teléfono:</b> ${phone}</p>`:""}<div class="line"></div><p><b>Forma de pago:</b> ${p.method}</p>${p.note?`<p><b>Nota:</b> ${p.note}</p>`:""}<p class="amount">ABONO: L ${Number(p.amount).toFixed(2)}</p><p class="balance">Saldo pendiente: L ${Number(n).toFixed(2)}</p><div class="line"></div><p class="foot">Atendido por: ${p.user||"Administrador"}</p><p class="foot">Gracias por su pago</p>
-
-
-</body></html>`);
+  w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${p.number}</title><style>body{font-family:Arial,sans-serif;width:280px;margin:0 auto;padding:14px;color:#111}h1{text-align:center;font-size:22px;margin:0 0 4px}h2{text-align:center;font-size:14px;margin:0 0 14px}p{font-size:13px;margin:7px 0}.line{border-top:1px dashed #777;margin:12px 0}.amount{font-size:20px;font-weight:800;margin-top:14px}.balance{font-size:16px;font-weight:700;margin-top:7px;text-align:right}.foot{text-align:center;font-size:11px;margin-top:18px}</style></head><body><h1>MASTEC INV</h1><h2>RECIBO DE ABONO</h2><div class="line"></div><p><b>Recibo:</b> ${p.number}</p><p><b>Fecha:</b> ${p.date}</p><p><b>Cliente:</b> ${name}</p>${phone?`<p><b>Teléfono:</b> ${phone}</p>`:""}<div class="line"></div><p><b>Forma de pago:</b> ${p.method}</p>${p.note?`<p><b>Nota:</b> ${p.note}</p>`:""}<p class="amount">ABONO: L ${Number(p.amount).toFixed(2)}</p><p class="balance">Saldo pendiente: L ${Number(n).toFixed(2)}</p><div class="line"></div><p class="foot">Atendido por: ${p.user||"Administrador"}</p><p class="foot">Gracias por su pago</p></body></html>`);
   w.document.close();
 }
+
+// ===== MASTEC V61.1 CLOUD =====
+const V61_CFG_KEY='mastec_v61_cloud_config';
+const V61_WORKSPACE_KEY='mastec_v61_workspace_id';
+let v61Supabase=null;
+function v61Cfg(){try{return JSON.parse(localStorage.getItem(V61_CFG_KEY)||'{}')}catch(e){return {}}}
+function v61SaveConfig(){
+  const cfg={url:(($('v61SupabaseUrl')?.value||'').trim()||'https://mwdwovepkhpjrmzuyqhl.supabase.co').replace(/\/$/,''),key:($('v61SupabaseKey')?.value||'').trim(),email:($('v61CloudEmail')?.value||'').trim()};
+  if(!cfg.url||!cfg.key)return msg('Escribe la URL y la publishable/anon key de Supabase.');
+  localStorage.setItem(V61_CFG_KEY,JSON.stringify(cfg)); v61LoadConfigUI(); v61SetStatus('Conexión guardada. Ahora inicia sesión en la nube.','ok');
+}
+function v61LoadConfigUI(){const c=v61Cfg(); const defaultUrl='https://mwdwovepkhpjrmzuyqhl.supabase.co'; if($('v61SupabaseUrl'))$('v61SupabaseUrl').value=c.url||defaultUrl; if($('v61SupabaseKey'))$('v61SupabaseKey').value=c.key||''; if($('v61CloudEmail'))$('v61CloudEmail').value=c.email||''; if($('v61WorkspaceId'))$('v61WorkspaceId').value=localStorage.getItem(V61_WORKSPACE_KEY)||'';}
+function v61SetStatus(t,kind=''){const el=$('v61CloudStatus');if(!el)return;el.innerHTML=t;el.className='v61status '+(kind==='ok'?'v61ok':kind==='warn'?'v61warn':kind==='danger'?'v61danger':'');}
+function v61SetSync(t,kind=''){const el=$('v61SyncStatus');if(!el)return;el.innerHTML=t;el.className='v61status '+(kind==='ok'?'v61ok':kind==='warn'?'v61warn':kind==='danger'?'v61danger':'');}
+async function v61EnsureClient(){
+  const c=v61Cfg(); if(!c.url||!c.key)throw new Error('Configura primero la URL y la publishable/anon key.');
+  if(!window.supabase){
+    await new Promise((resolve,reject)=>{const sc=document.createElement('script');sc.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';sc.onload=resolve;sc.onerror=()=>reject(new Error('No se pudo cargar Supabase. Revisa internet.'));document.head.appendChild(sc);});
+  }
+  if(!v61Supabase)v61Supabase=window.supabase.createClient(c.url,c.key,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+  return v61Supabase;
+}
+async function v61CloudSignUp(){
+  try{const c=v61Cfg();const email=($('v61CloudEmail')?.value||c.email||'').trim(),pass=$('v61CloudPass')?.value||'';if(!email||!pass)return msg('Escribe correo y contraseña.');const sb=await v61EnsureClient();const {data,error}=await sb.auth.signUp({email,password:pass});if(error)throw error;v61SetStatus(data.session?'Cuenta creada y sesión iniciada.':'Cuenta creada. Si Supabase pide confirmar el correo, confirma y luego inicia sesión.','ok');}catch(e){v61SetStatus('Error al crear cuenta: '+(e.message||e),'danger');}}
+async function v61CloudSignIn(){
+  try{v61SaveConfig();const c=v61Cfg(),email=($('v61CloudEmail')?.value||c.email||'').trim(),pass=$('v61CloudPass')?.value||'';if(!email||!pass)return msg('Escribe correo y contraseña.');const sb=await v61EnsureClient();const {data,error}=await sb.auth.signInWithPassword({email,password:pass});if(error)throw error;localStorage.setItem(V61_CFG_KEY,JSON.stringify({...c,email}));v61SetStatus('☁️ Sesión activa: '+(data.user?.email||email),'ok');await v61LoadWorkspace();}catch(e){v61SetStatus('Error al iniciar sesión: '+(e.message||e),'danger');}}
+async function v61CloudSignOut(){try{const sb=await v61EnsureClient();await sb.auth.signOut();v61SetStatus('Sesión de nube cerrada.');}catch(e){v61SetStatus('No se pudo cerrar sesión: '+(e.message||e),'danger');}}
+async function v61User(){const sb=await v61EnsureClient();const {data}=await sb.auth.getUser();return data?.user||null;}
+async function v61CreateWorkspace(){
+  try{const sb=await v61EnsureClient(),u=await v61User();if(!u)return msg('Inicia sesión en la nube primero.');const name=($('v61WorkspaceName')?.value||'MASTEC INV').trim();const {data,error}=await sb.from('mastec_workspaces').insert({name,owner_id:u.id}).select('id,name').single();if(error)throw error;localStorage.setItem(V61_WORKSPACE_KEY,data.id);v61LoadConfigUI();v61SetStatus('Espacio creado: <b>'+data.name+'</b>','ok');}catch(e){v61SetStatus('No se pudo crear el espacio: '+(e.message||e)+'<br><span class="v61mini">Primero ejecuta el archivo SQL incluido con V61 en Supabase.</span>','danger');}}
+async function v61LoadWorkspace(){
+  try{const sb=await v61EnsureClient(),u=await v61User();if(!u)return v61SetStatus('No hay sesión de nube.','warn');const {data,error}=await sb.from('mastec_workspaces').select('id,name').eq('owner_id',u.id).order('created_at',{ascending:true}).limit(1).maybeSingle();if(error)throw error;if(!data)return v61SetStatus('No tienes un espacio creado todavía. Usa “Crear espacio”.','warn');localStorage.setItem(V61_WORKSPACE_KEY,data.id);if($('v61WorkspaceName'))$('v61WorkspaceName').value=data.name||'MASTEC INV';if($('v61WorkspaceId'))$('v61WorkspaceId').value=data.id;v61SetStatus('☁️ Espacio conectado: <b>'+data.name+'</b>','ok');}catch(e){v61SetStatus('No se pudo cargar el espacio: '+(e.message||e),'danger');}}
+function v61EntityDefs(){return[
+  {entity:'products',key:'mastec_v9_products',label:'Productos'},
+  {entity:'clients',key:'mastec_v13_clients',label:'Clientes'},
+  {entity:'sales',key:'mastec_v12_sales',label:'Ventas'}
+];}
+function v61ReadArray(key){try{const x=JSON.parse(localStorage.getItem(key)||'[]');return Array.isArray(x)?x:[]}catch(e){return []}}
+async function v61PushLocal(){
+  try{const sb=await v61EnsureClient(),u=await v61User(),wid=localStorage.getItem(V61_WORKSPACE_KEY);if(!u)return msg('Inicia sesión en la nube.');if(!wid)return msg('Crea o carga primero el espacio de trabajo.');let total=0;
+    for(const d of v61EntityDefs()){
+      const rows=v61ReadArray(d.key);const payload=rows.map(r=>({workspace_id:wid,entity:d.entity,record_id:String(r.id),payload:r,updated_by:u.id}));
+      if(payload.length){const {error}=await sb.from('mastec_sync_records').upsert(payload,{onConflict:'workspace_id,entity,record_id'});if(error)throw error;total+=payload.length;}
+    }
+    localStorage.setItem('mastec_v61_last_push',new Date().toISOString());v61SetSync('☁️ Subidos <b>'+total+'</b> registros (productos, clientes y ventas).','ok');msg('Datos enviados a la nube.');
+  }catch(e){v61SetSync('Error al subir: '+(e.message||e)+'<br><span class="v61mini">Verifica RLS, tablas y sesión de Supabase.</span>','danger');}}
+async function v61PullCloud(){
+  try{const sb=await v61EnsureClient(),u=await v61User(),wid=localStorage.getItem(V61_WORKSPACE_KEY);if(!u)return msg('Inicia sesión en la nube.');if(!wid)return msg('Carga o crea primero el espacio de trabajo.');
+    const {data,error}=await sb.from('mastec_sync_records').select('entity,record_id,payload,updated_at').eq('workspace_id',wid).in('entity',['products','clients','sales']).order('updated_at',{ascending:true});if(error)throw error;
+    const groups={products:[],clients:[],sales:[]};(data||[]).forEach(r=>{if(groups[r.entity])groups[r.entity].push(r.payload)});
+    localStorage.setItem('mastec_v9_products',JSON.stringify(groups.products));localStorage.setItem('mastec_v13_clients',JSON.stringify(groups.clients));localStorage.setItem('mastec_v12_sales',JSON.stringify(groups.sales));
+    if(typeof loadV9==='function')loadV9(); if(typeof loadClientsV13==='function')loadClientsV13(); if(typeof loadV12==='function')loadV12();
+    if(typeof renderProductsV9==='function')renderProductsV9();if(typeof renderClientsV13==='function')renderClientsV13();
+    v61SetSync('⬇️ Descargados <b>'+((data||[]).length)+'</b> registros desde la nube.','ok');msg('Datos descargados.');
+  }catch(e){v61SetSync('Error al descargar: '+(e.message||e),'danger');}}
+async function v61RefreshStatus(){try{const sb=await v61EnsureClient(),u=await v61User(),wid=localStorage.getItem(V61_WORKSPACE_KEY);if(!u)return v61SetStatus('Sin sesión de nube.','warn');if(!wid)return v61SetStatus('Sesión activa, pero no hay espacio seleccionado.','warn');const {count,error}=await sb.from('mastec_sync_records').select('*',{count:'exact',head:true}).eq('workspace_id',wid);if(error)throw error;v61SetSync('☁️ Registros en la nube: <b>'+Number(count||0)+'</b>. Última subida: '+(localStorage.getItem('mastec_v61_last_push')||'—'),'ok');}catch(e){v61SetSync('No se pudo consultar la nube: '+(e.message||e),'danger');}}
+function showV61Cloud(){show('v61cloudModule');v61LoadConfigUI();v61RefreshStatus();}
 
 function openV13(){
   show("v13credit");renderV13Credit();
