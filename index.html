@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="es">
 <head>
 <meta charset="utf-8">
@@ -263,15 +263,15 @@ html,body{scroll-behavior:smooth}
   <div class="card" style="margin-bottom:14px">
     <h3>🔄 Sincronización</h3>
     <div style="margin-bottom:10px">
-      <span class="v61entity">📦 Productos</span><span class="v61entity">👥 Clientes</span><span class="v61entity">🛒 Ventas</span>
+      <span class="v61entity">📦 Inventario</span><span class="v61entity">👥 Clientes</span><span class="v61entity">🛒 Ventas</span><span class="v61entity">🔧 OT</span><span class="v61entity">💵 Caja</span><span class="v61entity">🧾 Compras</span><span class="v61entity">🚗 Vehiculos</span>
     </div>
     <div class="v61actions">
       <button class="btn orange" onclick="v61PushLocal()">☁️ Subir a Supabase</button>
       <button class="btn blue" onclick="v61PullCloud()">⬇️ Descargar de Supabase</button>
       <button class="btn green" onclick="v61RefreshStatus()">🔍 Ver estado Supabase</button>
       <button class="btn orange" onclick="v612FirebaseWorkspace()">🔥 Preparar espacio Firebase</button>
-      <button class="btn blue" onclick="v612FirebasePush()">🔥 Subir a Firebase</button>
-      <button class="btn green" onclick="v612FirebasePull()">🔥 Descargar de Firebase</button>
+      <button class="btn blue" onclick="v612FirebasePush()">☁️ Subir TODOS los datos</button>
+      <button class="btn green" onclick="v612FirebasePull()">⬇️ Descargar TODOS los datos</button>
     </div>
     <div id="v61SyncStatus" class="v61status" style="margin-top:12px">No se ha ejecutado una sincronización.</div>
   </div>
@@ -2478,44 +2478,111 @@ async function v612FirebaseSignIn(){
 async function v612FirebaseSignOut(){try{const x=await v612EnsureFirebase();await x.mods.auth.signOut(x.auth);v612SetProviderStatus('Sesión Firebase cerrada.','warn');}catch(e){v612SetProviderStatus('No se pudo cerrar Firebase: '+(e.message||e),'danger');}}
 async function v612FirebaseUser(){const x=await v612EnsureFirebase();return x.auth.currentUser||null}
 function v612EntityDefs(){return v61EntityDefs()}
+function v612BusinessDefs(){
+  return [
+    {entity:'users',key:'mastec_v7_users',label:'Usuarios'},
+    {entity:'audit',key:'mastec_v7_audit',label:'Auditoria'},
+    {entity:'workorders',key:'mastec_v8_workorders',label:'Ordenes de trabajo'},
+    {entity:'products',key:'mastec_v9_products',label:'Productos'},
+    {entity:'ot_lines',key:'mastec_v9_ot_lines',label:'Lineas OT'},
+    {entity:'ot_payments',key:'mastec_v38_ot_payments',label:'Cobros OT'},
+    {entity:'purchases',key:'mastec_v10_purchases',label:'Compras'},
+    {entity:'movements',key:'mastec_v10_movements',label:'Movimientos de inventario'},
+    {entity:'vehicles',key:'mastec_v11_vehicles',label:'Vehiculos'},
+    {entity:'sales',key:'mastec_v12_sales',label:'Ventas'},
+    {entity:'payments',key:'mastec_v13_payments',label:'Abonos de clientes'},
+    {entity:'clients',key:'mastec_v13_clients',label:'Clientes'},
+    {entity:'cash',key:'mastec_v31_caja',label:'Caja'},
+    {entity:'suppliers',key:'mastec_v41_suppliers',label:'Proveedores'},
+    {entity:'supplier_payments',key:'mastec_v42_supplier_payments',label:'Pagos a proveedores'},
+    {entity:'maintenance',key:'mastec_maintenance_v16',label:'Mantenimiento'}
+  ];
+}
+function v612ReadBusiness(key){
+  try{
+    const raw=localStorage.getItem(key);
+    if(raw===null)return null;
+    return JSON.parse(raw);
+  }catch(e){return null;}
+}
+function v612SetBusiness(key,value){
+  localStorage.setItem(key,JSON.stringify(value));
+}
+function v612WorkspaceIdForUser(u){
+  return localStorage.getItem(V612_FIREBASE_WORKSPACE_KEY)||('ws_'+u.uid.slice(0,12));
+}
+
 async function v612FirebasePush(){
   try{
     const x=await v612EnsureFirebase(),u=await v612FirebaseUser();
-    const wid=localStorage.getItem(V612_FIREBASE_WORKSPACE_KEY)||'default';
-    if(!u)return msg('Inicia sesión con Firebase primero.');
-    const db=x.db,{collection,doc,setDoc,writeBatch}=x.mods.firestore;
+    if(!u)return msg('Inicia sesion con Firebase primero.');
+    const wid=v612WorkspaceIdForUser(u);
+    localStorage.setItem(V612_FIREBASE_WORKSPACE_KEY,wid);
+    const {collection,doc,setDoc}=x.mods.firestore;
     let total=0;
-    const all=[];
-    for(const d of v612EntityDefs()){
-      for(const r of v61ReadArray(d.key))all.push({entity:d.entity,recordId:String(r.id),payload:r});
+    const now=new Date().toISOString();
+
+    for(const d of v612BusinessDefs()){
+      const value=v612ReadBusiness(d.key);
+      if(value===null)continue;
+      const ref=doc(collection(x.db,'workspaces',wid,'records'),d.entity+'__root');
+      await setDoc(ref,{
+        workspaceId:wid,
+        entity:d.entity,
+        recordId:'root',
+        payload:value,
+        updatedBy:u.uid,
+        updatedAt:now
+      },{merge:true});
+      total++;
     }
-    for(let i=0;i<all.length;i+=450){
-      const batch=writeBatch(db);
-      all.slice(i,i+450).forEach(r=>{const ref=doc(collection(db,'workspaces',wid,'records'),r.entity+'__'+r.recordId);batch.set(ref,{workspaceId:wid,entity:r.entity,recordId:r.recordId,payload:r,updatedBy:u.uid,updatedAt:new Date().toISOString()},{merge:true});});
-      await batch.commit(); total+=Math.min(450,all.length-i);
-    }
-    localStorage.setItem('mastec_v612_last_firebase_push',new Date().toISOString());
-    v61SetSync('🔥 Firebase: subidos <b>'+total+'</b> registros.','ok');msg('Datos enviados a Firebase.');
-  }catch(e){v61SetSync('Firebase: error al subir: '+(e.message||e),'danger');}
+
+    localStorage.setItem('mastec_v612_last_firebase_push',now);
+    v61SetSync('Firebase: <b>'+total+'</b> modulos de MASTEC subidos.','ok');
+    msg('Todos los datos fueron enviados a Firebase.');
+  }catch(e){
+    v61SetSync('Firebase: error al subir: '+(e.message||e),'danger');
+  }
 }
+
 async function v612FirebasePull(){
   try{
     const x=await v612EnsureFirebase(),u=await v612FirebaseUser();
-    const wid=localStorage.getItem(V612_FIREBASE_WORKSPACE_KEY)||'default';
-    if(!u)return msg('Inicia sesión con Firebase primero.');
-    const {collection,getDocs,query,where}=x.mods.firestore;
-    const snap=await getDocs(query(collection(x.db,'workspaces',wid,'records'),where('entity','in',['products','clients','sales'])));
-    const groups={products:[],clients:[],sales:[]};
-    snap.forEach(ds=>{const r=ds.data();if(groups[r.entity])groups[r.entity].push(r.payload)});
-    localStorage.setItem('mastec_v9_products',JSON.stringify(groups.products));
-    localStorage.setItem('mastec_v13_clients',JSON.stringify(groups.clients));
-    localStorage.setItem('mastec_v12_sales',JSON.stringify(groups.sales));
-    if(typeof loadV9==='function')loadV9();if(typeof loadClientsV13==='function')loadClientsV13();if(typeof loadV12==='function')loadV12();
-    if(typeof renderProductsV9==='function')renderProductsV9();if(typeof renderClientsV13==='function')renderClientsV13();
-    v61SetSync('🔥 Firebase: descargados <b>'+snap.size+'</b> registros.','ok');msg('Datos descargados desde Firebase.');
-  }catch(e){v61SetSync('Firebase: error al descargar: '+(e.message||e),'danger');}
+    if(!u)return msg('Inicia sesion con Firebase primero.');
+    const wid=v612WorkspaceIdForUser(u);
+    localStorage.setItem(V612_FIREBASE_WORKSPACE_KEY,wid);
+    const {collection,doc,getDoc}=x.mods.firestore;
+    let total=0;
+
+    for(const d of v612BusinessDefs()){
+      const snap=await getDoc(doc(collection(x.db,'workspaces',wid,'records'),d.entity+'__root'));
+      if(!snap.exists())continue;
+      v612SetBusiness(d.key,snap.data().payload);
+      total++;
+    }
+
+    if(typeof loadV9==='function')loadV9();
+    if(typeof loadClientsV13==='function')loadClientsV13();
+    if(typeof loadV12==='function')loadV12();
+    if(typeof loadOTPaymentsV38==='function')loadOTPaymentsV38();
+    if(typeof loadPurchasesV10==='function')loadPurchasesV10();
+    if(typeof loadVehiclesV11==='function')loadVehiclesV11();
+    if(typeof loadPaymentsV13==='function')loadPaymentsV13();
+    if(typeof loadCajaV32==='function')loadCajaV32();
+    if(typeof loadSuppliersV41==='function')loadSuppliersV41();
+    if(typeof loadSupplierPaymentsV42==='function')loadSupplierPaymentsV42();
+
+    if(typeof renderProductsV9==='function')renderProductsV9();
+    if(typeof renderClientsV13==='function')renderClientsV13();
+    if(typeof renderV12==='function')renderV12();
+
+    v61SetSync('Firebase: <b>'+total+'</b> modulos descargados al dispositivo.','ok');
+    msg('Todos los datos centrales fueron descargados.');
+  }catch(e){
+    v61SetSync('Firebase: error al descargar: '+(e.message||e),'danger');
+  }
 }
-async function v612FirebaseWorkspace(){
+function v612FirebaseWorkspace(){
   try{
     const x=await v612EnsureFirebase(),u=await v612FirebaseUser();if(!u)return msg('Inicia sesión con Firebase primero.');
     const {doc,setDoc}=x.mods.firestore;const wid=localStorage.getItem(V612_FIREBASE_WORKSPACE_KEY)||('ws_'+u.uid.slice(0,12));
