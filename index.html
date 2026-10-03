@@ -304,7 +304,7 @@ html,body{scroll-behavior:smooth}
 <div id="login" class="loginScreen">
   <div class="loginBox">
     <div class="logo">⚙ MASTEC INV</div>
-    <div class="loginSub">POS Web V60 · Productos inteligentes · Usuarios y permisos</div>
+    <div class="loginSub">POS Web V61.4 · Productos inteligentes · Usuarios y sincronizacion</div>
     <label>Usuario</label>
     <input id="loginUser" class="input" autocomplete="username" placeholder="Usuario">
     <label>Contraseña</label>
@@ -1083,15 +1083,13 @@ const E={
 
 function loadLocal(){
   try{users=JSON.parse(localStorage.getItem(keyUsers)||"[]")}catch(e){users=[]}
-  if(!users.length){
-    users=[
-      {id:1,user:"admin",name:"Administrador",pass:"admin123",role:"Administrador",active:true},
-      {id:2,user:"vendedor",name:"Vendedor principal",pass:"vendedor123",role:"Vendedor",active:true},
-      {id:3,user:"inventario",name:"Encargado de inventario",pass:"inventario123",role:"Inventario",active:true},
-      {id:4,user:"mecanico",name:"Mecánico",pass:"mecanico123",role:"Mecánico",active:true}
-    ]; saveUsers()
+  if(!Array.isArray(users))users=[];
+  if(!users.some(x=>x && String(x.user||"").trim().toLowerCase()==="admin")){
+    users.unshift({id:1,user:"admin",name:"Administrador",pass:"admin123",role:"Administrador",active:true});
+    saveUsers();
   }
   try{audit=JSON.parse(localStorage.getItem(keyAudit)||"[]")}catch(e){audit=[]}
+  if(!Array.isArray(audit))audit=[];
 }
 function saveUsers(){localStorage.setItem(keyUsers,JSON.stringify(users))}
 function saveAudit(){localStorage.setItem(keyAudit,JSON.stringify(audit))}
@@ -1154,12 +1152,15 @@ function log(action){
   if(audit.length>300)audit=audit.slice(0,300); saveAudit();
 }
 function doLogin(){
-  const u=E.loginUser.value.trim().toLowerCase(),p=E.loginPass.value;
-  const x=users.find(x=>x.user.toLowerCase()===u && x.pass===p);
+  const u=String(E.loginUser.value||"").trim().toLowerCase();
+  const p=String(E.loginPass.value||"");
+  if(!u||!p)return msg("Escribe usuario y contraseña.");
+  const x=users.find(x=>x && String(x.user||"").trim().toLowerCase()===u && String(x.pass||"")===p);
   if(!x)return msg("Usuario o contraseña incorrectos");
-  if(!x.active)return msg("Usuario desactivado");
+  if(x.active===false)return msg("Usuario desactivado");
   current={id:x.id,user:x.user,name:x.name,role:x.role};
-  localStorage.setItem(keySession,JSON.stringify(current)); log("Inicio de sesión");
+  localStorage.setItem(keySession,JSON.stringify(current));
+  log("Inicio de sesión");
   enter();
 }
 function enter(){
@@ -3382,3 +3383,4 @@ function restoreBackupV55(ev){
 
 
 </body></html>
+
