@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>MASTEC INV POS Web V61</title>
+<title>MASTEC INV POS Web V61.2</title>
 <style>
 *{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:#eef1f4;color:#17212b}
 .bar{background:#132735;color:#fff;padding:13px 20px;display:flex;justify-content:space-between;align-items:center;gap:10px}
@@ -171,7 +171,46 @@ html,body{scroll-behavior:smooth}
 
 <!-- ===== V61 CLOUD / SYNC ===== -->
 <div id="v61cloudModule" class="module hidden">
-  <div class="head"><h2>☁️ MASTEC V61 · Nube y sincronización</h2></div>
+  <div class="head"><h2>☁️ MASTEC V61.2 · Nube y sincronización</h2></div>
+  <div class="card" style="margin-bottom:14px;border-left:5px solid #ff6500">
+    <h3>🧩 Capa de nube preparada</h3>
+    <p style="color:#667085">V61.2 es <b>local-first</b>: tus datos actuales siguen funcionando en el navegador. La conexión de <b>Supabase V61.1 no se elimina ni se modifica</b>. Ahora MASTEC puede guardar la configuración de un segundo proveedor (Firebase) para usarlo como alternativa si Supabase continúa con el problema de DNS.</p>
+    <div class="v61cloudgrid">
+      <div>
+        <label>Proveedor de nube</label>
+        <select id="v612Provider" class="select" onchange="v612ProviderChanged()">
+          <option value="supabase">Supabase (actual)</option>
+          <option value="firebase">Firebase (alternativa)</option>
+        </select>
+      </div>
+      <div>
+        <label>Estado V61.2</label>
+        <div id="v612ProviderStatus" class="v61status">Supabase V61.1 conservado.</div>
+      </div>
+    </div>
+    <div id="v612FirebaseFields" class="v61cloudgrid hidden" style="margin-top:10px">
+      <div><label>Firebase apiKey</label><input id="v612FirebaseApiKey" class="input" placeholder="AIza...">
+      </div>
+      <div><label>Firebase authDomain</label><input id="v612FirebaseAuthDomain" class="input" placeholder="tu-proyecto.firebaseapp.com">
+      </div>
+      <div><label>Firebase projectId</label><input id="v612FirebaseProjectId" class="input" placeholder="tu-proyecto">
+      </div>
+      <div><label>Firebase appId</label><input id="v612FirebaseAppId" class="input" placeholder="1:123...:web:abc...">
+      </div>
+    </div>
+    <div id="v612FirebaseOptional" class="hidden" style="margin-top:8px">
+      <label>Firebase storageBucket <span class="v61mini">(opcional por ahora)</span></label>
+      <input id="v612FirebaseStorageBucket" class="input" placeholder="tu-proyecto.firebasestorage.app">
+    </div>
+    <div class="v61actions" style="margin-top:10px">
+      <button class="btn blue" onclick="v612SaveProviderConfig()">💾 Guardar configuración V61.2</button>
+      <button class="btn green" onclick="v612PrepareCheck()">🔎 Comprobar configuración</button>
+      <button class="btn orange" onclick="v612FirebaseSignIn()">🔐 Iniciar sesión Firebase</button>
+      <button class="btn gray" onclick="v612FirebaseSignUp()">➕ Crear cuenta Firebase</button>
+      <button class="btn green" onclick="v612FirebaseSignOut()">🚪 Cerrar Firebase</button>
+    </div>
+    <div id="v612ProviderInfo" class="v61mini" style="margin-top:9px">Firebase no se conecta ni cambia Supabase hasta que tú lo selecciones y configures.</div>
+  </div>
   <div class="card" style="margin-bottom:14px">
     <h3>Conecta MASTEC a tu base central</h3>
     <p style="color:#667085">V61.1 ya viene preparada con la URL de tu proyecto. Solo debes colocar la Publishable key y crear/iniciar tu cuenta de nube. En esta primera etapa, los dispositivos pueden entrar con la misma cuenta. No uses una clave <b>service_role</b> en el navegador.</p>
@@ -218,7 +257,7 @@ html,body{scroll-behavior:smooth}
       <button class="btn orange" onclick="v61CreateWorkspace()">🏢 Crear espacio</button>
       <button class="btn blue" onclick="v61LoadWorkspace()">🔄 Cargar mi espacio</button>
     </div>
-    <div class="v61mini" style="margin-top:8px">Para V61.1 usamos una cuenta de nube compartida entre tus dispositivos. La gestión de empleados con cuentas separadas y permisos por usuario entra en V61.2.</div>
+    <div class="v61mini" style="margin-top:8px">V61.2 conserva la cuenta/espacio de Supabase de V61.1 y prepara una segunda vía con Firebase. La gestión de empleados, roles y permisos por usuario se ampliará después sin perder los datos locales.</div>
   </div>
 
   <div class="card" style="margin-bottom:14px">
@@ -227,17 +266,20 @@ html,body{scroll-behavior:smooth}
       <span class="v61entity">📦 Productos</span><span class="v61entity">👥 Clientes</span><span class="v61entity">🛒 Ventas</span>
     </div>
     <div class="v61actions">
-      <button class="btn orange" onclick="v61PushLocal()">☁️ Subir datos de este equipo</button>
-      <button class="btn blue" onclick="v61PullCloud()">⬇️ Descargar datos de la nube</button>
-      <button class="btn green" onclick="v61RefreshStatus()">🔍 Ver estado</button>
+      <button class="btn orange" onclick="v61PushLocal()">☁️ Subir a Supabase</button>
+      <button class="btn blue" onclick="v61PullCloud()">⬇️ Descargar de Supabase</button>
+      <button class="btn green" onclick="v61RefreshStatus()">🔍 Ver estado Supabase</button>
+      <button class="btn orange" onclick="v612FirebaseWorkspace()">🔥 Preparar espacio Firebase</button>
+      <button class="btn blue" onclick="v612FirebasePush()">🔥 Subir a Firebase</button>
+      <button class="btn green" onclick="v612FirebasePull()">🔥 Descargar de Firebase</button>
     </div>
     <div id="v61SyncStatus" class="v61status" style="margin-top:12px">No se ha ejecutado una sincronización.</div>
   </div>
 
   <div class="card">
     <h3>🛡️ Recomendación</h3>
-    <p>Antes de subir datos reales, crea un <b>Respaldo V55</b>. V61 no elimina el respaldo local ni reemplaza V60.</p>
-    <p class="v61mini">La clave publicable de Supabase puede estar en el navegador; la clave service_role nunca debe ponerse aquí. Supabase debe tener RLS activo antes de usar datos reales.</p>
+    <p>Antes de subir datos reales, crea un <b>Respaldo V55</b>. V61.2 mantiene el modo local y no borra la configuración de Supabase.</p>
+    <p class="v61mini"><b>Supabase:</b> la publishable/anon key puede estar en el navegador; la service_role nunca. <b>Firebase:</b> la configuración web es pública por diseño, pero los datos deben protegerse con Authentication y Firestore Security Rules.</p>
   </div>
 </div>
 
@@ -2332,7 +2374,161 @@ async function v61PullCloud(){
     v61SetSync('⬇️ Descargados <b>'+((data||[]).length)+'</b> registros desde la nube.','ok');msg('Datos descargados.');
   }catch(e){v61SetSync('Error al descargar: '+(e.message||e),'danger');}}
 async function v61RefreshStatus(){try{const sb=await v61EnsureClient(),u=await v61User(),wid=localStorage.getItem(V61_WORKSPACE_KEY);if(!u)return v61SetStatus('Sin sesión de nube.','warn');if(!wid)return v61SetStatus('Sesión activa, pero no hay espacio seleccionado.','warn');const {count,error}=await sb.from('mastec_sync_records').select('*',{count:'exact',head:true}).eq('workspace_id',wid);if(error)throw error;v61SetSync('☁️ Registros en la nube: <b>'+Number(count||0)+'</b>. Última subida: '+(localStorage.getItem('mastec_v61_last_push')||'—'),'ok');}catch(e){v61SetSync('No se pudo consultar la nube: '+(e.message||e),'danger');}}
-function showV61Cloud(){show('v61cloudModule');v61LoadConfigUI();v61RefreshStatus();}
+function showV61Cloud(){show('v61cloudModule');v61LoadConfigUI();v61RefreshStatus();v612ShowCloudControls();}
+
+
+// ===== MASTEC V61.2 MULTI-PROVIDER / FIREBASE PREPARATION =====
+const V612_CFG_KEY='mastec_v612_cloud_config';
+const V612_SCHEMA='MASTEC-V61.2';
+const V612_FIREBASE_WORKSPACE_KEY='mastec_v612_firebase_workspace_id';
+let v612FirebaseApp=null;
+let v612FirebaseAuth=null;
+let v612FirebaseDb=null;
+let v612FirebaseMods=null;
+function v612Cfg(){try{return JSON.parse(localStorage.getItem(V612_CFG_KEY)||'{}')}catch(e){return {provider:'supabase'}}}
+function v612SetProviderStatus(t,kind=''){const el=$('v612ProviderStatus');if(!el)return;el.innerHTML=t;el.className='v61status '+(kind==='ok'?'v61ok':kind==='warn'?'v61warn':kind==='danger'?'v61danger':'')}
+function v612LoadConfigUI(){
+  const c=v612Cfg();
+  if($('v612Provider'))$('v612Provider').value=c.provider||'supabase';
+  const f=c.firebase||{};
+  if($('v612FirebaseApiKey'))$('v612FirebaseApiKey').value=f.apiKey||'';
+  if($('v612FirebaseAuthDomain'))$('v612FirebaseAuthDomain').value=f.authDomain||'';
+  if($('v612FirebaseProjectId'))$('v612FirebaseProjectId').value=f.projectId||'';
+  if($('v612FirebaseAppId'))$('v612FirebaseAppId').value=f.appId||'';
+  if($('v612FirebaseStorageBucket'))$('v612FirebaseStorageBucket').value=f.storageBucket||'';
+  v612ProviderChanged(false);
+}
+function v612ProviderChanged(showMsg=true){
+  const p=$('v612Provider')?.value||'supabase';
+  const isFb=p==='firebase';
+  $('v612FirebaseFields')?.classList.toggle('hidden',!isFb);
+  $('v612FirebaseOptional')?.classList.toggle('hidden',!isFb);
+  if($('v612ProviderInfo'))$('v612ProviderInfo').textContent=isFb?'Firebase está preparado como alternativa. Necesitarás la configuración de tu aplicación web de Firebase; no compartas claves privadas de servidor.':'Supabase V61.1 sigue intacto. Puedes continuar probándolo cuando su DNS vuelva a resolver.';
+  v612SetProviderStatus(isFb?'Firebase seleccionado como alternativa; Supabase permanece guardado.':'Supabase seleccionado. Configuración V61.1 conservada.','warn');
+  if(showMsg)msg(isFb?'Firebase seleccionado como alternativa.':'Supabase seleccionado.');
+}
+function v612SaveProviderConfig(){
+  const provider=$('v612Provider')?.value||'supabase';
+  const old=v612Cfg();
+  const firebase={apiKey:($('v612FirebaseApiKey')?.value||'').trim(),authDomain:($('v612FirebaseAuthDomain')?.value||'').trim(),projectId:($('v612FirebaseProjectId')?.value||'').trim(),appId:($('v612FirebaseAppId')?.value||'').trim(),storageBucket:($('v612FirebaseStorageBucket')?.value||'').trim()};
+  localStorage.setItem(V612_CFG_KEY,JSON.stringify({schema:V612_SCHEMA,provider,firebase,updatedAt:new Date().toISOString()}));
+  v612SetProviderStatus('Configuración V61.2 guardada. '+(provider==='firebase'?'Firebase queda preparado como alternativa.':'Supabase V61.1 sigue siendo el proveedor actual.'),'ok');
+  msg('Configuración V61.2 guardada.');
+}
+function v612PrepareCheck(){
+  const p=$('v612Provider')?.value||'supabase';
+  if(p==='supabase'){
+    const c=v61Cfg();
+    const ok=!!(c.url&&c.key);
+    v612SetProviderStatus(ok?'Supabase V61.1 tiene URL y clave guardadas. No se modificó nada.':'Supabase necesita URL y Publishable/anon key.',''+(ok?'ok':'warn'));
+    return;
+  }
+  const f={apiKey:($('v612FirebaseApiKey')?.value||'').trim(),authDomain:($('v612FirebaseAuthDomain')?.value||'').trim(),projectId:($('v612FirebaseProjectId')?.value||'').trim(),appId:($('v612FirebaseAppId')?.value||'').trim()};
+  const missing=Object.entries(f).filter(([,v])=>!v).map(([k])=>k);
+  if(missing.length)return v612SetProviderStatus('Faltan campos de Firebase: '+missing.join(', '),'warn');
+  v612SetProviderStatus('Configuración de Firebase completa. Puedes probar el proveedor cuando tengas el proyecto creado.','ok');
+}
+async function v612LoadFirebase(){
+  if(v612FirebaseMods)return v612FirebaseMods;
+  const base='https://www.gstatic.com/firebasejs/12.19.0/';
+  const [app,auth,firestore]=await Promise.all([
+    import(base+'firebase-app.js'),
+    import(base+'firebase-auth.js'),
+    import(base+'firebase-firestore.js')
+  ]);
+  v612FirebaseMods={app,auth,firestore};
+  return v612FirebaseMods;
+}
+async function v612EnsureFirebase(){
+  const c=v612Cfg(),f=c.firebase||{};
+  const required=['apiKey','authDomain','projectId','appId'];
+  const missing=required.filter(k=>!f[k]);
+  if(missing.length)throw new Error('Falta configuración Firebase: '+missing.join(', '));
+  const mods=await v612LoadFirebase();
+  if(!v612FirebaseApp){
+    const cfg={apiKey:f.apiKey,authDomain:f.authDomain,projectId:f.projectId,appId:f.appId};
+    if(f.storageBucket)cfg.storageBucket=f.storageBucket;
+    v612FirebaseApp=mods.app.initializeApp(cfg,'MASTEC_V61_2');
+    v612FirebaseAuth=mods.auth.getAuth(v612FirebaseApp);
+    v612FirebaseDb=mods.firestore.getFirestore(v612FirebaseApp);
+  }
+  return {app:v612FirebaseApp,auth:v612FirebaseAuth,db:v612FirebaseDb,mods};
+}
+async function v612FirebaseSignUp(){
+  try{
+    const email=($('v61CloudEmail')?.value||v61Cfg().email||'').trim(),pass=$('v61CloudPass')?.value||'';
+    if(!email||!pass)return msg('Escribe correo y contraseña.');
+    const x=await v612EnsureFirebase();
+    const cred=await x.mods.auth.createUserWithEmailAndPassword(x.auth,email,pass);
+    v612SetProviderStatus('☁️ Firebase: cuenta creada y sesión iniciada como <b>'+cred.user.email+'</b>.','ok');
+    msg('Cuenta Firebase creada.');
+  }catch(e){v612SetProviderStatus('Firebase: '+(e.message||e),'danger');}
+}
+async function v612FirebaseSignIn(){
+  try{
+    v612SaveProviderConfig();
+    const email=($('v61CloudEmail')?.value||v61Cfg().email||'').trim(),pass=$('v61CloudPass')?.value||'';
+    if(!email||!pass)return msg('Escribe correo y contraseña.');
+    const x=await v612EnsureFirebase();
+    const cred=await x.mods.auth.signInWithEmailAndPassword(x.auth,email,pass);
+    v612SetProviderStatus('☁️ Firebase conectado: <b>'+cred.user.email+'</b>. Supabase sigue intacto.','ok');
+    msg('Firebase conectado correctamente.');
+  }catch(e){v612SetProviderStatus('No se pudo conectar Firebase: '+(e.message||e),'danger');}
+}
+async function v612FirebaseSignOut(){try{const x=await v612EnsureFirebase();await x.mods.auth.signOut(x.auth);v612SetProviderStatus('Sesión Firebase cerrada.','warn');}catch(e){v612SetProviderStatus('No se pudo cerrar Firebase: '+(e.message||e),'danger');}}
+async function v612FirebaseUser(){const x=await v612EnsureFirebase();return x.auth.currentUser||null}
+function v612EntityDefs(){return v61EntityDefs()}
+async function v612FirebasePush(){
+  try{
+    const x=await v612EnsureFirebase(),u=await v612FirebaseUser();
+    const wid=localStorage.getItem(V612_FIREBASE_WORKSPACE_KEY)||'default';
+    if(!u)return msg('Inicia sesión con Firebase primero.');
+    const db=x.db,{collection,doc,setDoc,writeBatch}=x.mods.firestore;
+    let total=0;
+    const all=[];
+    for(const d of v612EntityDefs()){
+      for(const r of v61ReadArray(d.key))all.push({entity:d.entity,recordId:String(r.id),payload:r});
+    }
+    for(let i=0;i<all.length;i+=450){
+      const batch=writeBatch(db);
+      all.slice(i,i+450).forEach(r=>{const ref=doc(collection(db,'workspaces',wid,'records'),r.entity+'__'+r.recordId);batch.set(ref,{workspaceId:wid,entity:r.entity,recordId:r.recordId,payload:r,updatedBy:u.uid,updatedAt:new Date().toISOString()},{merge:true});});
+      await batch.commit(); total+=Math.min(450,all.length-i);
+    }
+    localStorage.setItem('mastec_v612_last_firebase_push',new Date().toISOString());
+    v61SetSync('🔥 Firebase: subidos <b>'+total+'</b> registros.','ok');msg('Datos enviados a Firebase.');
+  }catch(e){v61SetSync('Firebase: error al subir: '+(e.message||e),'danger');}
+}
+async function v612FirebasePull(){
+  try{
+    const x=await v612EnsureFirebase(),u=await v612FirebaseUser();
+    const wid=localStorage.getItem(V612_FIREBASE_WORKSPACE_KEY)||'default';
+    if(!u)return msg('Inicia sesión con Firebase primero.');
+    const {collection,getDocs,query,where}=x.mods.firestore;
+    const snap=await getDocs(query(collection(x.db,'workspaces',wid,'records'),where('entity','in',['products','clients','sales'])));
+    const groups={products:[],clients:[],sales:[]};
+    snap.forEach(ds=>{const r=ds.data();if(groups[r.entity])groups[r.entity].push(r.payload)});
+    localStorage.setItem('mastec_v9_products',JSON.stringify(groups.products));
+    localStorage.setItem('mastec_v13_clients',JSON.stringify(groups.clients));
+    localStorage.setItem('mastec_v12_sales',JSON.stringify(groups.sales));
+    if(typeof loadV9==='function')loadV9();if(typeof loadClientsV13==='function')loadClientsV13();if(typeof loadV12==='function')loadV12();
+    if(typeof renderProductsV9==='function')renderProductsV9();if(typeof renderClientsV13==='function')renderClientsV13();
+    v61SetSync('🔥 Firebase: descargados <b>'+snap.size+'</b> registros.','ok');msg('Datos descargados desde Firebase.');
+  }catch(e){v61SetSync('Firebase: error al descargar: '+(e.message||e),'danger');}
+}
+async function v612FirebaseWorkspace(){
+  try{
+    const x=await v612EnsureFirebase(),u=await v612FirebaseUser();if(!u)return msg('Inicia sesión con Firebase primero.');
+    const {doc,setDoc}=x.mods.firestore;const wid=localStorage.getItem(V612_FIREBASE_WORKSPACE_KEY)||('ws_'+u.uid.slice(0,12));
+    const name=($('v61WorkspaceName')?.value||'MASTEC INV').trim();
+    await setDoc(doc(x.db,'workspaces',wid),{name,ownerUid:u.uid,updatedAt:new Date().toISOString()},{merge:true});
+    localStorage.setItem(V612_FIREBASE_WORKSPACE_KEY,wid);if($('v61WorkspaceId'))$('v61WorkspaceId').value=wid;v612SetProviderStatus('Espacio Firebase listo: <b>'+name+'</b>','ok');msg('Espacio Firebase preparado.');
+  }catch(e){v612SetProviderStatus('No se pudo preparar el espacio Firebase: '+(e.message||e),'danger');}
+}
+function v612ShowCloudControls(){
+  v612LoadConfigUI();
+  const old=v61Cfg();
+  if(old.email&&$('v61CloudEmail')&&!$('v61CloudEmail').value)$('v61CloudEmail').value=old.email;
+}
 
 function openV13(){
   show("v13credit");renderV13Credit();
