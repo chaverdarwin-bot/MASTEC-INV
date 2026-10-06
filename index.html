@@ -1190,6 +1190,18 @@ function module(name){
   const perms=ROLE_PERMS[current.role]||[];
   if(!perms.includes(name))return msg("Sin permiso");
   log("Acceso al módulo: "+name);
+if(name==="Usuarios"){
+  show("users");
+  renderUsers();
+  previewRole();
+  return;
+}
+
+if(name==="Auditoría"){
+  show("audit");
+  renderAudit();
+  return;
+}
   if(name==="Respaldo"){showBackupV55();return;}
   if(name==="Nube"){showV61Cloud();return;}
   if(name==="Taller"){show("workshop");renderOT();return;}
