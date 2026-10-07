@@ -1110,7 +1110,162 @@ function loadV9(){
     ];saveProductsV9()
   }
 }
-function saveProductsV9(){localStorage.setItem(keyProductsV9,JSON.stringify(productsV9))}
+function saveProductsV9(){localStorage.setItem(keyProductsV9,JSON.stringify(productsV9));try{v612AutoPushProducts()}catch(e){console.error("MASTEC V61.6 auto push:",e)}}
+
+/* ===== V61.6 REALTIME PRODUCTS ===== */
+let v612ProductRealtimeUnsub=null;
+let v612ProductRealtimeStarting=false;
+
+async function v612AutoPushProducts(){
+  try{
+    const cfg=v612Cfg();
+    if(cfg.provider!=="firebase")return;
+    const x=await v612EnsureFirebase();
+    const u=await v612FirebaseUser();
+    if(!u)return;
+
+    const wid=v612WorkspaceIdForUser(u);
+    localStorage.setItem(V612_FIREBASE_WORKSPACE_KEY,wid);
+
+    const {collection,doc,getDoc,setDoc}=x.mods.firestore;
+    const ref=doc(collection(x.db,"workspaces",wid,"records"),"products__root");
+    const snap=await getDoc(ref);
+
+    const cloudProducts=snap.exists()&&Array.isArray(snap.data().payload)
+      ? snap.data().payload : [];
+
+    const localProducts=Array.isArray(productsV9)?productsV9:[];
+
+    const map=new Map();
+    cloudProducts.forEach(p=>map.set(String(p.id),p));
+    localProducts.forEach(p=>map.set(String(p.id),p));
+
+    const merged=[...map.values()];
+
+    productsV9=merged;
+    localStorage.setItem(keyProductsV9,JSON.stringify(merged));
+
+    await setDoc(ref,{
+      workspaceId:wid,
+      entity:"products",
+      recordId:"root",
+      payload:merged,
+      updatedBy:u.uid,
+      updatedAt:new Date().toISOString()
+    },{merge:true});
+
+    v61SetSync("🟢 Productos sincronizados automáticamente.","ok");
+  }catch(e){
+    console.error("MASTEC V61.6 productos:",e);
+    v61SetSync("⚠️ No se pudo sincronizar productos: "+(e.message||e),"danger");
+  }
+}
+
+function v612StopProductRealtime(){
+  if(typeof v612ProductRealtimeUnsub==="function"){
+    try{v612ProductRealtimeUnsub()}catch(e){}
+  }
+  v612ProductRealtimeUnsub=null;
+}
+
+async function v612StartProductRealtime(){
+  if(v612ProductRealtimeStarting)return;
+  v612ProductRealtimeStarting=true;
+
+  try{
+    const cfg=v612Cfg();
+    if(cfg.provider!=="firebase")return;
+
+    const x=await v612EnsureFirebase();
+    const u=await v612FirebaseUser();
+    if(!u)return;
+
+    v612StopProductRealtime();
+
+    const wid=v612WorkspaceIdForUser(u);
+    localStorage.setItem(V612_FIREBASE_WORKSPACE_KEY,wid);
+
+    const {collection,doc,onSnapshot}=x.mods.firestore;
+
+    const ref=doc(
+      collection(x.db,"workspaces",wid,"records"),
+      "products__root"
+    );
+
+    v612ProductRealtimeUnsub=onSnapshot(ref,snap=>{
+      if(!snap.exists())return;
+
+      const data=snap.data();
+      if(!Array.isArray(data.payload))return;
+
+      productsV9=data.payload;
+      localStorage.setItem(
+        keyProductsV9,
+        JSON.stringify(productsV9)
+      );
+
+      if(typeof renderProductsV9==="function")
+        renderProductsV9();
+
+      if(typeof renderV12ProductResults==="function")
+        renderV12ProductResults();
+
+      v61SetSync(
+        "🟢 Inventario actualizado automáticamente.",
+        "ok"
+      );
+
+    },err=>{
+      console.error("MASTEC V61.6 realtime:",err);
+      v61SetSync(
+        "⚠️ Error escuchando productos: "+(err.message||err),
+        "danger"
+      );
+    });
+
+    v61SetSync(
+      "🟢 Sincronización automática de inventario activa.",
+      "ok"
+    );
+
+  }catch(e){
+    console.error("MASTEC V61.6 realtime:",e);
+    v61SetSync(
+      "⚠️ No se pudo activar sincronización: "+(e.message||e),
+      "danger"
+    );
+  }finally{
+    v612ProductRealtimeStarting=false;
+  }
+}
+
+async function v612AutoResumeFirebase(){
+  try{
+    const cfg=v612Cfg();
+    if(cfg.provider!=="firebase")return;
+
+    const x=await v612EnsureFirebase();
+
+    x.mods.auth.onAuthStateChanged(
+      x.auth,
+      async user=>{
+        if(user){
+          localStorage.setItem(
+            V612_FIREBASE_WORKSPACE_KEY,
+            v612WorkspaceIdForUser(user)
+          );
+
+          await v612StartProductRealtime();
+        }else{
+          v612StopProductRealtime();
+        }
+      }
+    );
+
+  }catch(e){
+    console.warn("MASTEC V61.6 auto resume:",e);
+  }
+}
 function saveOTLinesV9(){localStorage.setItem(keyOTLinesV9,JSON.stringify(otLinesV9))}
 function loadOTPaymentsV38(){try{otPaymentsV38=JSON.parse(localStorage.getItem(keyOTPaymentsV38)||"[]")}catch(e){otPaymentsV38=[]}}
 function saveOTPaymentsV38(){localStorage.setItem(keyOTPaymentsV38,JSON.stringify(otPaymentsV38))}
@@ -2482,7 +2637,7 @@ async function v612FirebaseSignIn(){
     const email=($('v61CloudEmail')?.value||v61Cfg().email||'').trim(),pass=$('v61CloudPass')?.value||'';
     if(!email||!pass)return msg('Escribe correo y contraseña.');
     const x=await v612EnsureFirebase();
-    const cred=await x.mods.auth.signInWithEmailAndPassword(x.auth,email,pass);
+    const cred=await x.mods.auth.signInWithEmailAndPassword(x.auth,email,pass);await v612StartProductRealtime();
     v612SetProviderStatus('☁️ Firebase conectado: <b>'+cred.user.email+'</b>. Supabase sigue intacto.','ok');
     msg('Firebase conectado correctamente.');
   }catch(e){v612SetProviderStatus('No se pudo conectar Firebase: '+(e.message||e),'danger');}
@@ -3349,6 +3504,13 @@ function restoreBackupV55(ev){
   };
   reader.readAsText(file);
 }
+
+/* V61.6 - restaurar sesión Firebase y activar realtime */
+setTimeout(function(){
+  if(typeof v612AutoResumeFirebase==="function"){
+    v612AutoResumeFirebase();
+  }
+},800);
 </script>
 
 <div id="inventoryProfitV44Modal" class="modal hidden"><div style="max-width:1100px">
@@ -3394,6 +3556,7 @@ function restoreBackupV55(ev){
 
 
 </body></html>
+
 
 
 
