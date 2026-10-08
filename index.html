@@ -1246,6 +1246,11 @@ async function v612AutoResumeFirebase(){
 
     const x=await v612EnsureFirebase();
 
+    await x.mods.auth.setPersistence(
+      x.auth,
+      x.mods.auth.browserLocalPersistence
+    );
+
     x.mods.auth.onAuthStateChanged(
       x.auth,
       async user=>{
@@ -1255,15 +1260,25 @@ async function v612AutoResumeFirebase(){
             v612WorkspaceIdForUser(user)
           );
 
+          v612SetProviderStatus(
+            '☁️ Firebase conectado automáticamente: <b>'+user.email+'</b>. Supabase sigue intacto.',
+            'ok'
+          );
+
           await v612StartProductRealtime();
         }else{
           v612StopProductRealtime();
+
+          v612SetProviderStatus(
+            'Firebase configurado. Inicia sesión una vez para activar la sincronización automática.',
+            'warn'
+          );
         }
       }
     );
 
   }catch(e){
-    console.warn("MASTEC V61.6 auto resume:",e);
+    console.warn("MASTEC V61.7 auto resume:",e);
   }
 }
 function saveOTLinesV9(){localStorage.setItem(keyOTLinesV9,JSON.stringify(otLinesV9))}
@@ -2546,13 +2561,54 @@ function showV61Cloud(){show('v61cloudModule');v61LoadConfigUI();v61RefreshStatu
 
 // ===== MASTEC V61.2 MULTI-PROVIDER / FIREBASE PREPARATION =====
 const V612_CFG_KEY='mastec_v612_cloud_config';
+const V612_FIREBASE_DEFAULTS={
+  apiKey:"AIzaSyB5YXPxfYof8rnLGRvcVleVBCxUq3xlq34",
+  authDomain:"mastec-inv.firebaseapp.com",
+  projectId:"mastec-inv",
+  appId:"1:262394300506:web:ede9deb09ec4fe27eb063",
+  storageBucket:"mastec-inv.firebasestorage.app"
+};
+
 const V612_SCHEMA='MASTEC-V61.2';
 const V612_FIREBASE_WORKSPACE_KEY='mastec_v612_firebase_workspace_id';
 let v612FirebaseApp=null;
 let v612FirebaseAuth=null;
 let v612FirebaseDb=null;
 let v612FirebaseMods=null;
-function v612Cfg(){try{return JSON.parse(localStorage.getItem(V612_CFG_KEY)||'{}')}catch(e){return {provider:'supabase'}}}
+function v612Cfg(){
+  try{
+    const raw=JSON.parse(
+      localStorage.getItem(V612_CFG_KEY)||'{}'
+    );
+
+    const firebase=Object.assign(
+      {},
+      V612_FIREBASE_DEFAULTS,
+      raw.firebase||{}
+    );
+
+    return Object.assign(
+      {},
+      raw,
+      {
+        schema:V612_SCHEMA,
+        provider:"firebase",
+        firebase
+      }
+    );
+
+  }catch(e){
+
+    return {
+      schema:V612_SCHEMA,
+      provider:"firebase",
+      firebase:Object.assign(
+        {},
+        V612_FIREBASE_DEFAULTS
+      )
+    };
+  }
+}
 function v612SetProviderStatus(t,kind=''){const el=$('v612ProviderStatus');if(!el)return;el.innerHTML=t;el.className='v61status '+(kind==='ok'?'v61ok':kind==='warn'?'v61warn':kind==='danger'?'v61danger':'')}
 function v612LoadConfigUI(){
   const c=v612Cfg();
@@ -2571,7 +2627,7 @@ function v612ProviderChanged(showMsg=true){
   $('v612FirebaseFields')?.classList.toggle('hidden',!isFb);
   $('v612FirebaseOptional')?.classList.toggle('hidden',!isFb);
   if($('v612ProviderInfo'))$('v612ProviderInfo').textContent=isFb?'Firebase está preparado como alternativa. Necesitarás la configuración de tu aplicación web de Firebase; no compartas claves privadas de servidor.':'Supabase V61.1 sigue intacto. Puedes continuar probándolo cuando su DNS vuelva a resolver.';
-  v612SetProviderStatus(isFb?'Firebase seleccionado como alternativa; Supabase permanece guardado.':'Supabase seleccionado. Configuración V61.1 conservada.','warn');
+  if(showMsg)v612SetProviderStatus(isFb?'Firebase seleccionado como alternativa; Supabase permanece guardado.':'Supabase seleccionado. Configuración V61.1 conservada.','warn');
   if(showMsg)msg(isFb?'Firebase seleccionado como alternativa.':'Supabase seleccionado.');
 }
 function v612SaveProviderConfig(){
@@ -2610,16 +2666,50 @@ async function v612EnsureFirebase(){
   const c=v612Cfg(),f=c.firebase||{};
   const required=['apiKey','authDomain','projectId','appId'];
   const missing=required.filter(k=>!f[k]);
-  if(missing.length)throw new Error('Falta configuración Firebase: '+missing.join(', '));
+
+  if(missing.length)
+    throw new Error(
+      'Falta configuración Firebase: '+missing.join(', ')
+    );
+
   const mods=await v612LoadFirebase();
+
   if(!v612FirebaseApp){
-    const cfg={apiKey:f.apiKey,authDomain:f.authDomain,projectId:f.projectId,appId:f.appId};
-    if(f.storageBucket)cfg.storageBucket=f.storageBucket;
-    v612FirebaseApp=mods.app.initializeApp(cfg,'MASTEC_V61_2');
-    v612FirebaseAuth=mods.auth.getAuth(v612FirebaseApp);
-    v612FirebaseDb=mods.firestore.getFirestore(v612FirebaseApp);
+    const cfg={
+      apiKey:f.apiKey,
+      authDomain:f.authDomain,
+      projectId:f.projectId,
+      appId:f.appId
+    };
+
+    if(f.storageBucket)
+      cfg.storageBucket=f.storageBucket;
+
+    v612FirebaseApp=mods.app.initializeApp(
+      cfg,
+      'MASTEC_V61_2'
+    );
+
+    v612FirebaseAuth=mods.auth.initializeAuth(
+      v612FirebaseApp,
+      {
+        persistence:[
+          mods.auth.browserLocalPersistence
+        ]
+      }
+    );
+
+    v612FirebaseDb=mods.firestore.getFirestore(
+      v612FirebaseApp
+    );
   }
-  return {app:v612FirebaseApp,auth:v612FirebaseAuth,db:v612FirebaseDb,mods};
+
+  return {
+    app:v612FirebaseApp,
+    auth:v612FirebaseAuth,
+    db:v612FirebaseDb,
+    mods
+  };
 }
 async function v612FirebaseSignUp(){
   try{
@@ -2634,13 +2724,45 @@ async function v612FirebaseSignUp(){
 async function v612FirebaseSignIn(){
   try{
     v612SaveProviderConfig();
-    const email=($('v61CloudEmail')?.value||v61Cfg().email||'').trim(),pass=$('v61CloudPass')?.value||'';
+
+    const email=($('v61CloudEmail')?.value||v61Cfg().email||'').trim();
+    const pass=$('v61CloudPass')?.value||'';
+
     if(!email||!pass)return msg('Escribe correo y contraseña.');
+
     const x=await v612EnsureFirebase();
-    const cred=await x.mods.auth.signInWithEmailAndPassword(x.auth,email,pass);await v612StartProductRealtime();
-    v612SetProviderStatus('☁️ Firebase conectado: <b>'+cred.user.email+'</b>. Supabase sigue intacto.','ok');
+
+    await x.mods.auth.setPersistence(
+      x.auth,
+      x.mods.auth.browserLocalPersistence
+    );
+
+    const cred=await x.mods.auth.signInWithEmailAndPassword(
+      x.auth,
+      email,
+      pass
+    );
+
+    localStorage.setItem(
+      V612_FIREBASE_WORKSPACE_KEY,
+      v612WorkspaceIdForUser(cred.user)
+    );
+
+    await v612StartProductRealtime();
+
+    v612SetProviderStatus(
+      '☁️ Firebase conectado: <b>'+cred.user.email+'</b>. Supabase sigue intacto.',
+      'ok'
+    );
+
     msg('Firebase conectado correctamente.');
-  }catch(e){v612SetProviderStatus('No se pudo conectar Firebase: '+(e.message||e),'danger');}
+
+  }catch(e){
+    v612SetProviderStatus(
+      'No se pudo conectar Firebase: '+(e.message||e),
+      'danger'
+    );
+  }
 }
 async function v612FirebaseSignOut(){try{const x=await v612EnsureFirebase();await x.mods.auth.signOut(x.auth);v612SetProviderStatus('Sesión Firebase cerrada.','warn');}catch(e){v612SetProviderStatus('No se pudo cerrar Firebase: '+(e.message||e),'danger');}}
 async function v612FirebaseUser(){const x=await v612EnsureFirebase();return x.auth.currentUser||null}
@@ -3556,6 +3678,14 @@ setTimeout(function(){
 
 
 </body></html>
+
+
+
+
+
+
+
+
 
 
 
