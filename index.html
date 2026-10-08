@@ -2581,10 +2581,11 @@ function v612Cfg(){
       localStorage.getItem(V612_CFG_KEY)||'{}'
     );
 
+    // V61.7: Firebase integrado tiene prioridad sobre configuraciones antiguas.
     const firebase=Object.assign(
       {},
-      V612_FIREBASE_DEFAULTS,
-      raw.firebase||{}
+      raw.firebase||{},
+      V612_FIREBASE_DEFAULTS
     );
 
     return Object.assign(
@@ -2633,7 +2634,13 @@ function v612ProviderChanged(showMsg=true){
 function v612SaveProviderConfig(){
   const provider=$('v612Provider')?.value||'supabase';
   const old=v612Cfg();
-  const firebase={apiKey:($('v612FirebaseApiKey')?.value||'').trim(),authDomain:($('v612FirebaseAuthDomain')?.value||'').trim(),projectId:($('v612FirebaseProjectId')?.value||'').trim(),appId:($('v612FirebaseAppId')?.value||'').trim(),storageBucket:($('v612FirebaseStorageBucket')?.value||'').trim()};
+  const firebase={
+    apiKey:(($('v612FirebaseApiKey')?.value||'').trim()||V612_FIREBASE_DEFAULTS.apiKey),
+    authDomain:(($('v612FirebaseAuthDomain')?.value||'').trim()||V612_FIREBASE_DEFAULTS.authDomain),
+    projectId:(($('v612FirebaseProjectId')?.value||'').trim()||V612_FIREBASE_DEFAULTS.projectId),
+    appId:(($('v612FirebaseAppId')?.value||'').trim()||V612_FIREBASE_DEFAULTS.appId),
+    storageBucket:(($('v612FirebaseStorageBucket')?.value||'').trim()||V612_FIREBASE_DEFAULTS.storageBucket)
+  };
   localStorage.setItem(V612_CFG_KEY,JSON.stringify({schema:V612_SCHEMA,provider,firebase,updatedAt:new Date().toISOString()}));
   v612SetProviderStatus('Configuración V61.2 guardada. '+(provider==='firebase'?'Firebase queda preparado como alternativa.':'Supabase V61.1 sigue siendo el proveedor actual.'),'ok');
   msg('Configuración V61.2 guardada.');
@@ -3678,6 +3685,7 @@ setTimeout(function(){
 
 
 </body></html>
+
 
 
 
